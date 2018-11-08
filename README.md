@@ -30,3 +30,6 @@ The request method initiates the payment request to KNET gateway .
 
 the response method recieves the callback data from gateway and returns the unencrypted array.
 
+
+# Support
+For support and mobile app integration, contact at connect@zolute.consulting
