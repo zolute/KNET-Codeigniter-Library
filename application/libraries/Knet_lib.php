@@ -30,6 +30,7 @@ class Knet_lib {
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => "POST",
             CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_FRESH_CONNECT => true,
             CURLOPT_POSTFIELDS => json_encode($postfield),
             CURLOPT_HTTPHEADER => array(
                 'Authorization: Basic ' . base64_encode($this->CI->config->item('knet_ClientId') . ":" . $this->CI->config->item('knet_ClientSecret')),
@@ -44,9 +45,9 @@ class Knet_lib {
 
 
         if (isJson($response)) {
-            // var_dump(json_decode($response));
+          
             $authenticateData = json_decode($response);
-
+            
             if ($authenticateData->Status == "1") {
                 return $authenticateData->AccessToken;
             } else {
@@ -57,7 +58,7 @@ class Knet_lib {
         }
     }
 
-    function renderPG($amount, $transactionID, $referenceID, $udf1 = '', $udf2 = '', $udf3 = '', $paymentType = '', $lang = 'en') {
+    function request($amount, $transactionID, $referenceID, $udf1 = '', $udf2 = '', $udf3 = '', $paymentType = '', $lang = 'en') {
 
         //get access token 
         if ($AccessToken = $this->getAccessToken()) {
@@ -72,16 +73,14 @@ class Knet_lib {
                 'tij_MerchantUdf1' => $udf1,
                 'tij_MerchantUdf2' => $udf2,
                 'tij_MerchantUdf3' => $udf3,
-                'tij_MerchPayType' => $paymentType
+                'tij_MerchPayType' => 1
             );
             $url = "https://pg.cbk.com/ePay/pg/epay?_v=" . $AccessToken;
-            $form = "<form id='pgForm' method='post' action='$url'>";
+            $form = "<form id='pgForm' method='post' action='$url' enctype='application/x-www-form-urlencoded'>";
             foreach ($formData as $k => $v) {
                 $form .= "<input type='hidden' name='$k' value='$v'>";
             }
-            $form .= "</form><script type='text/javascript'>
-    document.getElementById('pgForm').submit();
-</script>";
+            $form .= "<input type='submit' value='Submit' /></form>";
 
             return $form;
         } else {
@@ -89,7 +88,7 @@ class Knet_lib {
         }
     }
 
-    function pgResponse($encrp) {
+    function response($encrp) {
         //returns the unencrypted data
         //get access token 
         if ($AccessToken = $this->getAccessToken()) {
