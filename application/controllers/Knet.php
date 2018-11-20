@@ -1,29 +1,24 @@
 <?php
 
-if (!defined('BASEPATH')) {
+if (!defined('BASEPATH'))
     exit('No direct script access allowed');
-}
 
-class Knet extends MX_Controller
-{
+class Knet extends CI_Controller {
 
-    public function __construct()
-    {
+    function __construct() {
         parent::__construct();
         $this->load->library('knet_lib');
     }
 
-    public function request()
-    {
+    public function request() {
 
-        echo $this->knet_lib->renderPG(1, "1234", "my reference number");
+        echo $this->knet_lib->request(1, uniqid(), "abc");
     }
 
-    public function response()
-    {
+    function response() {
         $encrp = $this->input->get('encrp');
 
-        var_dump($this->knet_lib->pgResponse($encrp));
+        var_dump($this->knet_lib->response($encrp));
     }
 
 }
