@@ -9,31 +9,50 @@
 class Knet_lib {
 
     private $CI;
+    private $ClientId;
+    private $ClientSecret;
+    private $ENCRP_KEY;
+    private $URL;
+    
 
     function __construct() {
         $this->CI = & get_instance();
         $this->CI->load->config('knet');
+        if($this->CI->config->item('knet_sandbox')=== true){
+            $this->ClientId = $this->CI->config->item('knet_test_ClientId');
+            $this->ClientSecret = $this->CI->config->item('knet_test_ClientSecret');
+            $this->ENCRP_KEY = $this->CI->config->item('knet_test_ENCRP_KEY');
+            $this->URL = $this->CI->config->item('knet_test_url');
+        }else{
+            $this->ClientId = $this->CI->config->item('knet_live_ClientId');
+            $this->ClientSecret = $this->CI->config->item('knet_live_ClientSecret');
+            $this->ENCRP_KEY = $this->CI->config->item('knet_live_ENCRP_KEY');
+            $this->URL = $this->CI->config->item('knet_live_url');
+        }
     }
 
     private function getAccessToken() {
-        $postfield = array("ClientId" => $this->CI->config->item('knet_ClientId'),
-            "ClientSecret" => $this->CI->config->item('knet_ClientSecret'),
-            "ENCRP_KEY" => $this->CI->config->item('knet_ENCRP_KEY'));
+        $postfield = array("ClientId" => $this->ClientId,
+            "ClientSecret" => $this->ClientSecret,
+            "ENCRP_KEY" => $this->ENCRP_KEY);
+        
         $curl = curl_init();
 
         curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://pg.cbk.com/ePay/api/cbk/online/pg/merchant/Authenticate",
+            CURLOPT_URL => $this->URL."/ePay/api/cbk/online/pg/merchant/Authenticate",
             CURLOPT_ENCODING => "",
             CURLOPT_FOLLOWLOCATION => 1,
             CURLOPT_MAXREDIRS => 10,
             CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYHOST=>0,
+            CURLOPT_SSL_VERIFYPEER=>0,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => "POST",
             CURLOPT_RETURNTRANSFER => 1,
             CURLOPT_FRESH_CONNECT => true,
             CURLOPT_POSTFIELDS => json_encode($postfield),
             CURLOPT_HTTPHEADER => array(
-                'Authorization: Basic ' . base64_encode($this->CI->config->item('knet_ClientId') . ":" . $this->CI->config->item('knet_ClientSecret')),
+                'Authorization: Basic ' . base64_encode($this->ClientId. ":" . $this->ClientSecret),
                 "Content-Type: application/json",
                 "cache-control: no-cache"
             ),
@@ -41,9 +60,9 @@ class Knet_lib {
 
         $response = curl_exec($curl);
         $err = curl_error($curl);
+        
         curl_close($curl);
-
-
+        
         if (isJson($response)) {
           
             $authenticateData = json_decode($response);
@@ -64,7 +83,7 @@ class Knet_lib {
         if ($AccessToken = $this->getAccessToken()) {
             //generate pg page 
             $formData = array(
-                'tij_MerchantEncryptCode' => $this->CI->config->item('knet_ENCRP_KEY'),
+                'tij_MerchantEncryptCode' => $this->ENCRP_KEY,
                 'tij_MerchAuthKeyApi' => $AccessToken,
                 'tij_MerchantPaymentLang' => $lang,
                 'tij_MerchantPaymentAmount' => $amount,
@@ -75,12 +94,14 @@ class Knet_lib {
                 'tij_MerchantUdf3' => $udf3,
                 'tij_MerchPayType' => 1
             );
-            $url = "https://pg.cbk.com/ePay/pg/epay?_v=" . $AccessToken;
+            $url = $this->URL."/ePay/pg/epay?_v=" . $AccessToken;
             $form = "<form id='pgForm' method='post' action='$url' enctype='application/x-www-form-urlencoded'>";
             foreach ($formData as $k => $v) {
                 $form .= "<input type='hidden' name='$k' value='$v'>";
             }
-            $form .= "<input type='submit' value='Submit' /></form>";
+            $form .= "</form><div style='position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%;text-align:center'>Redirecting to PG ... <br> <b> DO NOT REFRESH</b></div><script type='text/javascript'>
+    document.getElementById('pgForm').submit();
+</script>";
 
             return $form;
         } else {
@@ -92,7 +113,7 @@ class Knet_lib {
         //returns the unencrypted data
         //get access token 
         if ($AccessToken = $this->getAccessToken()) {
-            $url = "https://pg.cbk.com/ePay/api/cbk/online/pg/GetTransactions/" . $encrp . "/" . $AccessToken;
+            $url = $this->URL."/ePay/api/cbk/online/pg/GetTransactions/" . $encrp . "/" . $AccessToken;
             $curl = curl_init();
 
             curl_setopt_array($curl, array(
@@ -105,7 +126,7 @@ class Knet_lib {
                 CURLOPT_CUSTOMREQUEST => "GET",
                 CURLOPT_RETURNTRANSFER => 1,
                 CURLOPT_HTTPHEADER => array(
-                    'Authorization: Basic ' . base64_encode($this->CI->config->item('knet_ClientId') . ":" . $this->CI->config->item('knet_ClientSecret')),
+                    'Authorization: Basic ' .base64_encode($this->ClientId. ":" . $this->ClientSecret),
                     "Content-Type: application/json",
                     "cache-control: no-cache"
                 ),
@@ -117,7 +138,7 @@ class Knet_lib {
 
 
             if (isJson($response)) {
-                // var_dump(json_decode($response));
+                
                 $paymentDetails = json_decode($response);
                 return $paymentDetails;
             } else {
